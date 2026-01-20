@@ -2,13 +2,21 @@ const axios = require("axios");
 const express = require("express");
 const cors = require("cors");
 const app = express();
-const baseMonitors = require("./monitors.config");
-console.log("Loaded baseMonitors:", baseMonitors);
 
 const TelegramBot = require("node-telegram-bot-api");
 const TELEGRAM_TOKEN = "8536238878:AAF_yhMjix-jJzFm5xVdYjMrj3C015N3dF0";
 const CHAT_ID = "7747272668";
 const bot = new TelegramBot(TELEGRAM_TOKEN, { polling: false });
+
+const CHECK_INTERVAL_SECONDS = Number(process.env.CHECK_INTERVAL_SECONDS || 180);
+const CHECK_INTERVAL_MS = CHECK_INTERVAL_SECONDS * 1000;
+
+const fs = require("fs");
+const yaml = require("js-yaml");
+
+const file = fs.readFileSync("/app/config/monitors.yaml", "utf8");
+const baseMonitors = yaml.load(file);
+console.log("Loaded baseMonitors:", baseMonitors);
 
 app.use(cors());
 app.use(express.json());
@@ -87,7 +95,7 @@ async function checkAllMonitors() {
 
 setInterval(() => {
   checkAllMonitors();
-}, 3 * 60 * 1000);
+}, CHECK_INTERVAL_MS);
 checkAllMonitors();
 
 function sendAlert(message) {
