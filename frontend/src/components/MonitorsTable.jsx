@@ -15,7 +15,7 @@ export function MonitorsTable() {
   useEffect(() => {
     async function fetchMonitors() {
       try {
-        const response = await fetch("http://localhost:3000/api/monitors");
+        const response = await fetch("/api/monitors");
         const data = await response.json();
         console.log("Monitors from backend:", data);
         setMonitors(data);
