@@ -2,30 +2,27 @@ const axios = require("axios");
 const express = require("express");
 const cors = require("cors");
 const app = express();
-
+const fs = require("fs");
+const yaml = require("js-yaml");
 const TelegramBot = require("node-telegram-bot-api");
+
+app.use(cors());
+app.use(express.json());
+
 const TELEGRAM_TOKEN = "8536238878:AAF_yhMjix-jJzFm5xVdYjMrj3C015N3dF0";
 const CHAT_ID = "7747272668";
 const bot = new TelegramBot(TELEGRAM_TOKEN, { polling: false });
-
-const CHECK_INTERVAL_SECONDS = Number(process.env.CHECK_INTERVAL_SECONDS || 180);
-const CHECK_INTERVAL_MS = CHECK_INTERVAL_SECONDS * 1000;
-
-const fs = require("fs");
-const yaml = require("js-yaml");
 
 const file = fs.readFileSync("/app/config/monitors.yaml", "utf8");
 const baseMonitors = yaml.load(file);
 console.log("Loaded baseMonitors:", baseMonitors);
 
-app.use(cors());
-app.use(express.json());
-
 let monitors = baseMonitors.map(m => ({
   ...m,
   status: "unknown",
   lastCheck: null,
-  responseTime: null
+  responseTime: null,
+  interval: m.interval || 180
 }));
 
 app.get("/api/health", (req, res) => {
@@ -83,20 +80,21 @@ async function checkMonitor(monitor) {
   }
 }
 
-async function checkAllMonitors() {
-  console.log("Checking all monitors...");
-
+function startMonitoring() {
   for (const monitor of monitors) {
-    await checkMonitor(monitor);
-  }
+    const intervalMs = monitor.interval * 1000;
 
-  console.log("Check finished");
+    setInterval(() => {
+      checkMonitor(monitor);
+    }, intervalMs);
+
+    // первая проверка сразу
+    checkMonitor(monitor);
+  }
 }
 
-setInterval(() => {
-  checkAllMonitors();
-}, CHECK_INTERVAL_MS);
-checkAllMonitors();
+startMonitoring();
+
 
 function sendAlert(message) {
   bot.sendMessage(CHAT_ID, message);

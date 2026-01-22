@@ -56,8 +56,11 @@ export function MonitorsTable() {
           <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Last check
           </TableHead>
-          <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground text-center">
             Response time
+          </TableHead>
+          <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground text-center">
+            Check interval
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -118,8 +121,12 @@ function MonitorRow({ monitor, index }) {
         {monitor.lastCheck ? monitor.lastCheck : "—"}
       </TableCell>
       {/* Response time */}
-      <TableCell className="text-sm text-muted-foreground">
+      <TableCell className="text-sm text-muted-foreground text-center">
         {monitor.responseTime ? `${monitor.responseTime} ms` : "—"}
+      </TableCell>
+      {/* Сheck interval */}
+      <TableCell className="text-sm text-muted-foreground text-center">
+        {monitor.interval}
       </TableCell>
     </TableRow>
   );
