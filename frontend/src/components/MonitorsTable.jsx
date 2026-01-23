@@ -50,8 +50,11 @@ export function MonitorsTable() {
           <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             URLs
           </TableHead>
-          <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground text-center">
             Status
+          </TableHead>
+          <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground text-center">
+            Code
           </TableHead>
           <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Last check
@@ -103,7 +106,7 @@ function MonitorRow({ monitor, index }) {
       </TableCell>
 
       {/* Status */}
-      <TableCell>
+      <TableCell className="text-center">
         <span
           className={`px-3 py-1 rounded-full text-sm font-medium
             ${
@@ -115,6 +118,28 @@ function MonitorRow({ monitor, index }) {
         >
           {monitor.status}
         </span>
+      </TableCell>
+      {/* HTTP Code */}
+      <TableCell className="text-center">
+        {monitor.httpCode ? (
+          <span
+            className={`px-2 py-1 rounded text-xs font-semibold
+              ${
+                monitor.httpCode >= 200 && monitor.httpCode < 300
+                  ? "bg-green-100 text-green-700"
+                : monitor.httpCode >= 300 && monitor.httpCode < 400
+                  ? "bg-yellow-100 text-yellow-700"
+                : monitor.httpCode >= 400 && monitor.httpCode < 500
+                  ? "bg-orange-100 text-orange-700"
+                : "bg-red-100 text-red-700"
+              }
+            `}
+          >
+           {monitor.httpCode}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
       </TableCell>
       {/* Last check */}
       <TableCell className="text-sm text-muted-foreground">

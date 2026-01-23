@@ -11,6 +11,7 @@ app.use(express.json());
 
 const TELEGRAM_TOKEN = "8536238878:AAF_yhMjix-jJzFm5xVdYjMrj3C015N3dF0";
 const CHAT_ID = "7747272668";
+const GROUP_ID = "-1003559534697";
 const bot = new TelegramBot(TELEGRAM_TOKEN, { polling: false });
 
 const file = fs.readFileSync("/app/config/monitors.yaml", "utf8");
@@ -22,7 +23,8 @@ let monitors = baseMonitors.map(m => ({
   status: "unknown",
   lastCheck: null,
   responseTime: null,
-  interval: m.interval || 180
+  interval: m.interval || 180,
+  httpCode: null
 }));
 
 app.get("/api/health", (req, res) => {
@@ -39,10 +41,12 @@ async function checkMonitor(monitor) {
   try {
     const start = Date.now();
 
-    await axios.get(monitor.url, {
+    const response = await axios.get(monitor.url, {
       timeout: 10000,        // ждём максимум 10 секунд
       validateStatus: () => true // не бросать ошибку на 4xx/5xx
     });
+
+    monitor.httpCode = response.status;
 
     const responseTime = Date.now() - start;
 
@@ -59,6 +63,7 @@ async function checkMonitor(monitor) {
     monitor.responseTime = responseTime;
   } catch (error) {
     monitor.status = "down";
+    monitor.httpCode = null;
     monitor.lastCheck = new Date().toLocaleString("ru-RU", {
       timeZone: "Europe/Kyiv",
       day: "2-digit",
@@ -95,9 +100,10 @@ function startMonitoring() {
 
 startMonitoring();
 
+// bot.sendMessage(GROUP_ID, "🟢 Сервис запущен и работает");
 
 function sendAlert(message) {
-  bot.sendMessage(CHAT_ID, message);
+  bot.sendMessage(GROUP_ID, message);
 }
 
 const PORT = 3000;
