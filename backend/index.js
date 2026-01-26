@@ -24,7 +24,8 @@ let monitors = baseMonitors.map(m => ({
   lastCheck: null,
   responseTime: null,
   interval: m.interval || 180,
-  httpCode: null
+  httpCode: null,
+  failCount: 0
 }));
 
 app.get("/api/health", (req, res) => {
@@ -46,42 +47,34 @@ async function checkMonitor(monitor) {
       validateStatus: () => true // не бросать ошибку на 4xx/5xx
     });
 
-    monitor.httpCode = response.status;
-
     const responseTime = Date.now() - start;
 
-    monitor.status = "up";
-    monitor.lastCheck = new Date().toLocaleString("ru-RU", {
-      timeZone: "Europe/Kyiv",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit"
-    });
+    monitor.httpCode = response.status;
     monitor.responseTime = responseTime;
-  } catch (error) {
-    monitor.status = "down";
-    monitor.httpCode = null;
-    monitor.lastCheck = new Date().toLocaleString("ru-RU", {
-      timeZone: "Europe/Kyiv",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit"
-    });
-    monitor.responseTime = null;
-  }
 
-  if (previousStatus === "up" && monitor.status === "down") {
-      sendAlert(`🔴 Down: ${monitor.url}`);
-  }
+    monitor.status = "up";
+    monitor.lastCheck = new Date().toLocaleString("ru-RU", { timeZone: "Europe/Kyiv" });
+    monitor.failCount = 0;
 
-  if (previousStatus === "down" && monitor.status === "up") {
+    if (previousStatus === "down") {
+      monitor.status = "up";
       sendAlert(`🟢 Up: ${monitor.url}`);
+
+    } else {
+      monitor.status = "up";
+    }
+
+  } catch (error) {
+    monitor.httpCode = null;
+    monitor.responseTime = null;
+    monitor.lastCheck = new Date().toLocaleString("ru-RU", { timeZone: "Europe/Kyiv" });
+
+    monitor.failCount++;
+
+    if (monitor.failCount >= 2 && monitor.status !== "down") {
+      monitor.status = "down";
+      sendAlert(`🔴 Down: ${monitor.url}`);
+    }
   }
 }
 
