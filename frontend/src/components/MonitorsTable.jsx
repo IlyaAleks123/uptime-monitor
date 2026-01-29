@@ -11,6 +11,9 @@ import { useState, useEffect } from "react";
 
 export function MonitorsTable() {
   const [monitors, setMonitors] = useState([]);
+  const [newUrl, setNewUrl] = useState("");
+  const [newInterval, setNewInterval] = useState(180);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     async function fetchMonitors() {
@@ -39,50 +42,136 @@ export function MonitorsTable() {
     ));
   }
 
-  return (
-    <Table className="rounded-lg overflow-hidden">
-      {/* Заголовок таблицы */}
-      <TableHeader className="bg-muted">
-        <TableRow>
-          <TableHead className="w-12 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            #
-          </TableHead>
-          <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            URLs
-          </TableHead>
-          <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground text-center">
-            Status
-          </TableHead>
-          <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground text-center">
-            Code
-          </TableHead>
-          <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Last check
-          </TableHead>
-          <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground text-center">
-            Response time
-          </TableHead>
-          <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground text-center">
-            Check interval
-          </TableHead>
-        </TableRow>
-      </TableHeader>
+async function addMonitor() {
+  setError(null);
 
-      {/* Тело таблицы */}
-      <TableBody className="border-b border-border">
-        {monitors.map((monitor, index) => (
-          <MonitorRow
-            key={monitor.id}
-            monitor={monitor}
-            index={index}
-          />
-        ))}
-      </TableBody>
-    </Table>
+  try {
+    const response = await fetch("/api/monitors", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url: newUrl,
+        interval: Number(newInterval)
+      })
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      setError(data.error || "Failed to add monitor");
+      return;
+    }
+
+    const created = await response.json();
+    setMonitors([...monitors, created]);
+    setNewUrl("");
+    setNewInterval(180);
+  } catch (err) {
+    setError("Network error");
+  }
+}
+
+async function deleteMonitor(id) {
+  try {
+    const response = await fetch(`/api/monitors/${id}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to delete");
+    }
+
+    setMonitors(monitors.filter(m => m.id !== id));
+  } catch (err) {
+    console.error("Delete error:", err);
+    setError("Failed to delete monitor");
+  }
+}
+
+  return (
+    <>
+      {/* Форма ввода */}
+      <div className="mb-4 flex flex-col md:flex-row gap-2">
+        <input
+          type="text"
+          placeholder="https://example.com"
+          value={newUrl}
+          onChange={(e) => setNewUrl(e.target.value)}
+          className="border rounded px-3 py-2 flex-1"
+        />
+
+        <input
+          type="number"
+          min="10"
+          value={newInterval}
+          onChange={(e) => setNewInterval(e.target.value)}
+          className="border rounded px-3 py-2 w-32"
+        />
+
+        <button
+          onClick={addMonitor}
+          disabled={!newUrl}
+          className="bg-blue-600 disabled:opacity-50 text-white px-4 py-2 rounded hover:bg-blue-700"
+        >
+          Add
+        </button>
+      </div>
+
+      {error && <div className="text-red-600 mb-2">{error}</div>}
+
+      <Table className="rounded-lg overflow-hidden">
+
+        {/* Заголовок таблицы */}
+        <TableHeader className="bg-muted">
+          <TableRow>
+            <TableHead className="w-12 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              #
+            </TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              URLs
+            </TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground text-center">
+              Status
+            </TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground text-center">
+              Code
+            </TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Last check
+            </TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground text-center">
+              Response time
+            </TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground text-center">
+              Check interval
+            </TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground text-center">
+              Action
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+
+        {/* Тело таблицы */}
+        <TableBody className="border-b border-border">
+          {monitors.map((monitor, index) => (
+            <MonitorRow
+              key={monitor.id}
+              monitor={monitor}
+              index={index}
+              onDelete={deleteMonitor}
+            />
+          ))}
+        </TableBody>
+      </Table>
+    </>
   )
 }
 
-function MonitorRow({ monitor, index }) {
+function formatDate(value) {
+  if (!value) return "—";
+  return new Date(value).toLocaleString("ru-RU");
+}
+
+function MonitorRow({ monitor, index, onDelete }) {
   return (
     <TableRow
       className={`transition
@@ -143,7 +232,7 @@ function MonitorRow({ monitor, index }) {
       </TableCell>
       {/* Last check */}
       <TableCell className="text-sm text-muted-foreground">
-        {monitor.lastCheck ? monitor.lastCheck : "—"}
+        {formatDate(monitor.lastCheck)}
       </TableCell>
       {/* Response time */}
       <TableCell className="text-sm text-muted-foreground text-center">
@@ -152,6 +241,16 @@ function MonitorRow({ monitor, index }) {
       {/* Сheck interval */}
       <TableCell className="text-sm text-muted-foreground text-center">
         {monitor.interval}
+      </TableCell>
+      {/* Action */}
+      <TableCell className="text-center">
+        <button
+          onClick={() => onDelete(monitor.id)}
+          className="text-red-600 hover:text-red-800 font-bold"
+          title="Delete"
+        >
+          ✖
+        </button>
       </TableCell>
     </TableRow>
   );
