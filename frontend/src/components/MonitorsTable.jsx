@@ -245,9 +245,12 @@ function MonitorRow({ monitor, index, onDelete }) {
       {/* Action */}
       <TableCell className="text-center">
         <button
-          onClick={() => onDelete(monitor.id)}
+          onClick={() => {
+            if (confirm(`Delete ${monitor.url}?`)) {
+              onDelete(monitor.id);
+            }
+          }}
           className="text-red-600 hover:text-red-800 font-bold"
-          title="Delete"
         >
           ✖
         </button>
